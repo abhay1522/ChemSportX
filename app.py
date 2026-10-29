@@ -2126,15 +2126,27 @@ Enter one molecule per line in the format:
             mime="text/csv",
             key="download_structure_property_csv"
         )
-# --- Bulk PDF Export Button ---
+# --- Bulk PDF Export Button (All Compounds) ---
         if st.button("📄 Generate Bulk Molecular PDF Report (All Molecules)", key="gen_bulk_pdf"):
-            with st.spinner("Generating PDF report for all loaded molecules..."):
+            with st.spinner("Compiling all input molecules into the PDF report..."):
                 mol_dict = {}
-                for line in molecule_input.splitlines():
-                    if "," in line:
-                        n, s = line.split(",", 1)
-                        mol_dict[n.strip()] = s.strip()
                 
+                # Check how your app receives the input list and parse all of them
+                if 'molecule_input' in locals() or 'molecule_input' in globals():
+                    for line in molecule_input.splitlines():
+                        if "," in line:
+                            parts = line.split(",", 1)
+                            mol_dict[parts[0].strip()] = parts[1].strip()
+                
+                # Fallback: if input variable has a different name, pull directly from session state or dataframe source
+                if not mol_dict and "df" in locals():
+                    for idx, row in df.iterrows():
+                        # Assumes your dataframe has columns for name and smiles
+                        name_col = row.get("Name", row.get("Molecule", f"Compound_{idx+1}"))
+                        smiles_col = row.get("SMILES", "")
+                        if smiles_col:
+                            mol_dict[str(name_col)] = str(smiles_col)
+
                 bulk_pdf = generate_bulk_molecules_pdf(mol_dict)
 
             st.download_button(
