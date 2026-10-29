@@ -40,6 +40,118 @@ from reportlab.lib.utils import ImageReader
 import tempfile
 import os
 
+def generate_bulk_molecules_pdf(molecule_dict):
+    """
+    Generates a compact bulk PDF report for a list/dictionary of molecules.
+    Fits multiple molecules per page in neat, structured tables.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=30,
+        rightMargin=30,
+        topMargin=30,
+        bottomMargin=30
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "BulkTitle",
+        parent=styles["Title"],
+        fontSize=18,
+        alignment=TA_CENTER,
+        textColor=HexColor("#17365D")
+    )
+    
+    header_style = ParagraphStyle(
+        "TableHeader",
+        parent=styles["BodyText"],
+        fontSize=8,
+        leading=10,
+        textColor=colors.white,
+        alignment=TA_CENTER
+    )
+
+    cell_style = ParagraphStyle(
+        "TableCell",
+        parent=styles["BodyText"],
+        fontSize=7.5,
+        leading=9.5
+    )
+
+    story = [
+        Paragraph("BULK MOLECULAR ANALYSIS REPORT", title_style),
+        Spacer(1, 0.15 * inch)
+    ]
+
+    # Table Header
+    table_data = [[
+        Paragraph("<b>Structure</b>", header_style),
+        Paragraph("<b>Molecule & SMILES</b>", header_style),
+        Paragraph("<b>Formula & MW</b>", header_style),
+        Paragraph("<b>Properties (LogP, TPSA)</b>", header_style),
+        Paragraph("<b>Bonds (σ / π)</b>", header_style)
+    ]]
+
+    temp_images = []
+
+    for name, smiles in molecule_dict.items():
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            continue
+        
+        # Calculate properties
+        props = calculate_properties(mol)
+        
+        # Save temporary 2D image for the table
+        img = Draw.MolToImage(mol, size=(200, 150))
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        tmp.close()
+        img.save(tmp.name)
+        temp_images.append(tmp.name)
+
+        # Build concise row content
+        info_col = Paragraph(f"<b>{name}</b><br/><font size=6>{smiles}</font>", cell_style)
+        formula_col = Paragraph(f"<b>Formula:</b> {props['Molecular Formula']}<br/><b>MW:</b> {props['Molecular Weight']} g/mol", cell_style)
+        props_col = Paragraph(f"<b>LogP:</b> {props['LogP']}<br/><b>TPSA:</b> {props['TPSA']} Å²<br/><b>HBD/HBA:</b> {props['Hydrogen Bond Donors']}/{props['Hydrogen Bond Acceptors']}", cell_style)
+        bonds_col = Paragraph(f"<b>σ Bonds:</b> {props['Sigma (σ) Bonds']}<br/><b>π Bonds:</b> {props['Pi (π) Bonds']}<br/><b>Total:</b> {props['Total Bonds (σ + π)']}", cell_style)
+
+        table_data.append([
+            Image(tmp.name, width=1.1 * inch, height=0.85 * inch),
+            info_col,
+            formula_col,
+            props_col,
+            bonds_col
+        ])
+
+    if len(table_data) > 1:
+        bulk_table = Table(
+            table_data,
+            colWidths=[1.25 * inch, 1.8 * inch, 1.4 * inch, 1.5 * inch, 1.2 * inch],
+            repeatRows=1
+        )
+        bulk_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), HexColor("#17365D")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(bulk_table)
+
+    doc.build(story)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+
+    # Clean up temp image files
+    for path in temp_images:
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
+    return pdf_data
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -2014,6 +2126,24 @@ Enter one molecule per line in the format:
             mime="text/csv",
             key="download_structure_property_csv"
         )
+# --- Bulk PDF Export Button ---
+        if st.button("📄 Generate Bulk Molecular PDF Report (All Molecules)", key="gen_bulk_pdf"):
+            with st.spinner("Generating PDF report for all loaded molecules..."):
+                mol_dict = {}
+                for line in molecule_input.splitlines():
+                    if "," in line:
+                        n, s = line.split(",", 1)
+                        mol_dict[n.strip()] = s.strip()
+                
+                bulk_pdf = generate_bulk_molecules_pdf(mol_dict)
+
+            st.download_button(
+                "⬇️ Download Bulk PDF Report",
+                data=bulk_pdf,
+                file_name="Bulk_Molecular_Analysis_Report.pdf",
+                mime="application/pdf",
+                key="download_bulk_pdf"
+            )
         
 # ============================================================
 # XBOT AI ASSISTANT PAGE
