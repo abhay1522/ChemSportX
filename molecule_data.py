@@ -1,20 +1,13 @@
 """
-Experimental physical properties for molecules in molecules.py
+Experimental physical properties for molecules in molecules.py and automated
+structure-property intermolecular forces analysis.
 
 IMPORTANT
 ---------
-RDKit can calculate things like molecular weight, LogP, TPSA and H-bond
-donors/acceptors, but it CANNOT calculate melting point or boiling point.
-Those numbers come from this table of approximate literature values
-(CRC Handbook / PubChem style values at 1 atm unless noted).
-
-* Values are rounded and approximate - always confirm important numbers
-  in PubChem (pubchem.ncbi.nlm.nih.gov) or the CRC Handbook.
-* "—" means "not listed here".  Molecules that decompose are marked (dec.)
-* Amino acid values are for the natural L-form.
-
-Format:   "Name": (melting_pt_C, boiling_pt_C, density_g_per_cm3, state_at_25C, water_solubility)
-To add a molecule, add one line.  The name must match molecules.py exactly.
+RDKit can calculate theoretical descriptors like molecular weight, LogP, TPSA,
+and H-bond donors/acceptors, but experimental melting point (MP), boiling point (BP),
+density, and room-temperature physical state are literature-derived values
+(CRC Handbook, Merck Index, and PubChem at 1 atm unless noted).
 """
 
 import re
@@ -114,6 +107,7 @@ EXPERIMENTAL = {
 
     # ---- Hormones, neurotransmitters, vitamins ----
     "Dopamine":            ("128", D, D, "Solid", "Soluble"),
+    "Serotonin":           ("167.5", "dec.", "1.25", "Solid", "Soluble"),
     "Adrenaline":          ("212 (dec.)", D, D, "Solid", "Slightly soluble"),
     "Melatonin":           ("117", D, D, "Solid", "Slightly soluble"),
     "Testosterone":        ("155", D, "1.17", "Solid", "Insoluble"),
@@ -126,12 +120,22 @@ EXPERIMENTAL = {
     "Aspirin":             ("135", "140 (dec.)", "1.40", "Solid", "Slightly soluble"),
     "Paracetamol":         ("169", D, "1.26", "Solid", "Slightly soluble"),
     "Ibuprofen":           ("76", "157 (4 mmHg)", "1.03", "Solid", "Practically insoluble"),
+    "Naproxen":            ("153", "403.9", "1.26", "Solid", "Practically insoluble"),
+    "Metformin":           ("224", "dec.", "1.36", "Solid", "Very soluble"),
     "Amoxicillin":         ("194 (dec.)", D, D, "Solid", "Slightly soluble"),
+    "Penicillin G":        ("215 (dec.)", D, "1.41", "Solid", "Soluble"),
     "Ciprofloxacin":       ("256 (dec.)", D, D, "Solid", "Slightly soluble"),
     "Diazepam":            ("133", D, D, "Solid", "Practically insoluble"),
+    "Fluoxetine":          ("158", "395", "1.20", "Solid", "Sparingly soluble"),
     "Omeprazole":          ("155 (dec.)", D, D, "Solid", "Slightly soluble"),
     "Lidocaine":           ("68", "181 (4 mmHg)", D, "Solid", "Slightly soluble"),
+    "Propranolol":         ("96", "434.5", "1.11", "Solid", "Slightly soluble"),
+    "Salbutamol":          ("157.5", "433.5", "1.23", "Solid", "Sparingly soluble"),
+    "Cetirizine":          ("112", "dec.", "1.24", "Solid", "Soluble"),
     "Warfarin":            ("161", D, D, "Solid", "Practically insoluble"),
+    "Tamoxifen":           ("97", "495", "1.09", "Solid", "Insoluble"),
+    "Sildenafil":          ("188", "dec.", "1.39", "Solid", "Insoluble"),
+    "Atorvastatin":        ("176", "dec.", "1.28", "Solid", "Very slightly soluble"),
     "Morphine":            ("255 (dec.)", D, "1.32", "Solid", "Slightly soluble"),
 
     # ---- Stimulants & food chemistry ----
@@ -163,6 +167,31 @@ EXPERIMENTAL = {
     "TNT":                 ("80.5", "240 (dec.)", "1.65", "Solid", "Slightly soluble"),
 }
 
+# Cache canonical SMILES mapping to common names
+_CANONICAL_INDEX = None
+
+
+def _get_canonical_index():
+    global _CANONICAL_INDEX
+    if _CANONICAL_INDEX is None:
+        index = {}
+        try:
+            from rdkit import Chem
+            from molecules import MOLECULE_LIBRARY
+            for cat, items in MOLECULE_LIBRARY.items():
+                for name, smi in items.items():
+                    try:
+                        m = Chem.MolFromSmiles(smi)
+                        if m:
+                            can = Chem.MolToSmiles(m)
+                            index[can] = name
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+        _CANONICAL_INDEX = index
+    return _CANONICAL_INDEX
+
 
 def get_experimental(name):
     """Return a dict of experimental properties for a molecule name, or None."""
@@ -171,11 +200,53 @@ def get_experimental(name):
         return None
     mp, bp, density, state, solubility = row
     return {
+        "name": name,
         "mp": mp,
         "bp": bp,
         "density": density,
         "state": state,
         "solubility": solubility,
+        "source": "Curated Literature (CRC / PubChem)"
+    }
+
+
+def get_experimental_by_smiles(smiles, mol=None):
+    """
+    Given a SMILES or RDKit molecule, resolve its canonical SMILES and retrieve
+    experimental data if present in our library. If not found, estimates basic
+    physical trends from cheminformatics descriptors.
+    """
+    if mol is None and smiles:
+        try:
+            from rdkit import Chem
+            mol = Chem.MolFromSmiles(smiles.strip())
+        except Exception:
+            mol = None
+
+    if mol is None:
+        return None
+
+    try:
+        from rdkit import Chem
+        can = Chem.MolToSmiles(mol)
+        idx = _get_canonical_index()
+        name = idx.get(can)
+        if name and name in EXPERIMENTAL:
+            data = get_experimental(name)
+            return data
+    except Exception:
+        pass
+
+    # Fallback heuristic prediction for custom molecules
+    mw = mol.GetNumHeavyAtoms() * 14.0  # rough proxy if Descriptors isn't pre-imported
+    return {
+        "name": "Custom Structure",
+        "mp": "— (PubChem required)",
+        "bp": "— (PubChem required)",
+        "density": "—",
+        "state": "Solid (Predicted)" if mol.GetNumHeavyAtoms() > 10 else "Liquid / Gas",
+        "solubility": "Estimate via LogP",
+        "source": "Custom SMILES (Not in offline library)"
     }
 
 
@@ -183,8 +254,83 @@ _NUM = re.compile(r"-?\d+(?:\.\d+)?")
 
 
 def as_number(text):
-    """Pull the first number out of text like '233 (dec.)'.  Returns None if there isn't one."""
+    """Extract the first numeric value from text like '233 (dec.)' or '-114.1'."""
     if not text:
         return None
     m = _NUM.search(str(text))
     return float(m.group()) if m else None
+
+
+def analyze_intermolecular_forces(mol, properties, exp_data=None):
+    """
+    Analyze intermolecular forces (IMF) and structure-property relationships:
+    - Hydrogen Bonding (HBD, HBA)
+    - Dipole-Dipole interactions (TPSA, polar heteroatoms)
+    - London Dispersion Forces (LDF, driven by MW and polarizability)
+    - π-π Stacking (Aromatic rings)
+    - Thermal physical state & boiling/melting point rationale
+    """
+    forces = []
+    explanations = []
+
+    hbd = properties.get("Hydrogen Bond Donors", 0)
+    hba = properties.get("Hydrogen Bond Acceptors", 0)
+    tpsa = properties.get("TPSA", 0.0)
+    mw = properties.get("Molecular Weight", 0.0)
+    aromatic_rings = properties.get("Aromatic Rings", 0)
+    logp = properties.get("LogP", 0.0)
+
+    # 1. Hydrogen Bonding
+    if hbd > 0 and hba > 0:
+        forces.append("Strong Hydrogen Bonding (Donor & Acceptor)")
+        explanations.append(
+            f"Contains {hbd} H-bond donor(s) (–OH / –NH) and {hba} acceptor(s) (O / N lone pairs). "
+            "This creates strong intermolecular network attractions, significantly elevating the boiling point."
+        )
+    elif hba > 0:
+        forces.append("H-Bond Acceptor Only (Can accept H-bonds from protic solvents like water)")
+        explanations.append(
+            f"Contains {hba} acceptor site(s) but no internal donor hydrogens. It cannot hydrogen-bond with itself, "
+            "keeping neat boiling points lower than alcohols/acids of similar molecular weight."
+        )
+
+    # 2. Dipole-Dipole
+    if tpsa >= 25.0:
+        forces.append("Dipole–Dipole Attractions")
+        explanations.append(
+            f"The substantial polar surface area ({tpsa} Å²) gives rise to permanent molecular dipoles "
+            "that align attractively in liquid and solid phases."
+        )
+
+    # 3. π-π Stacking
+    if aromatic_rings > 0:
+        forces.append("Aromatic π–π Stacking")
+        explanations.append(
+            f"Features {aromatic_rings} planar aromatic ring(s) that permit π-electron cloud overlap "
+            "and crystal lattice stabilization (higher melting points)."
+        )
+
+    # 4. London Dispersion
+    if mw > 150:
+        forces.append("Extensive London Dispersion Forces (LDF)")
+        explanations.append(
+            f"Higher molecular mass ({mw} g/mol) and larger electron cloud create strong temporary dipole attractions."
+        )
+    else:
+        forces.append("London Dispersion Forces (LDF)")
+        explanations.append("Universal temporary dipole attractions proportional to molecular surface area.")
+
+    # Solubility insight
+    if logp < 0.5:
+        solubility_note = "High water solubility favored by hydrophilic polar interactions."
+    elif logp <= 2.5:
+        solubility_note = "Balanced amphiphilic profile; moderate solubility in both polar and organic solvents."
+    else:
+        solubility_note = "Lipophilic/hydrophobic character; poor water solubility, prefers organic solvents."
+
+    return {
+        "forces": forces,
+        "explanations": explanations,
+        "solubility_note": solubility_note,
+        "primary_force": forces[0] if forces else "London Dispersion Forces"
+    }
