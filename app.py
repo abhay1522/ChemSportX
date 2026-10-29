@@ -17,9 +17,9 @@ from rdkit.Chem import (
 # 3D Visualization
 import py3Dmol
 import streamlit.components.v1 as components
-
-# PDF
 from extra_features import render_extra_features
+# PDF
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
