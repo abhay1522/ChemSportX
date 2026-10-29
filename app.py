@@ -2014,33 +2014,7 @@ Enter one molecule per line in the format:
             mime="text/csv",
             key="download_structure_property_csv"
         )
-
-    else:
-        st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
-
-
-
-# ============================================================
-# ARENA ANALYTICS
-# ============================================================
-
-elif page == "🏟️ Arena Analytics":
-
-    st.title("🏟️ Arena Analytics & Advanced Tools")
-
-    smiles = st.session_state.get("active_smiles", "CCO")
-    mol = get_molecule(smiles)
-
-    if mol is None:
-        st.error("❌ Invalid SMILES notation. Please load a valid molecule first.")
-    else:
-        properties = calculate_properties(mol)
-        render_extra_features(mol, properties, smiles)
-
-else:
-        st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
-
-
+        
 # ============================================================
 # XBOT AI ASSISTANT PAGE
 # ============================================================
@@ -2079,6 +2053,36 @@ elif page == "🤖 XBot Assistant":
                     st.session_state.xbot_messages.append({"role": "assistant", "content": reply})
                 else:
                     st.error(reply)
+
+
+
+    else:
+        st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
+
+
+
+# ============================================================
+# ARENA ANALYTICS
+# ============================================================
+
+elif page == "🏟️ Arena Analytics":
+
+    st.title("🏟️ Arena Analytics & Advanced Tools")
+
+    smiles = st.session_state.get("active_smiles", "CCO")
+    mol = get_molecule(smiles)
+
+    if mol is None:
+        st.error("❌ Invalid SMILES notation. Please load a valid molecule first.")
+    else:
+        properties = calculate_properties(mol)
+        render_extra_features(mol, properties, smiles)
+
+else:
+        st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
+
+
+
 
 
 
