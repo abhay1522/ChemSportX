@@ -804,7 +804,17 @@ def save_3d_structure_png(mol):
 # ============================================================
 # PROPERTY INTERPRETATION HELPERS
 # ============================================================
-
+page = st.sidebar.radio(
+    "Navigation",
+    [
+        "🏠 Home",
+        "📖 Theory",
+        "🧬 Molecular Visualization",
+        "📊 Molecular Properties Report",
+        "📈 Structure–Property Analysis",
+        "🏟️ Arena Analytics",
+    ]
+)
 def get_property_interpretation(property_name, value, properties):
     """Return a student-friendly interpretation for each reported property."""
 
@@ -2012,6 +2022,35 @@ Enter one molecule per line in the format:
 
     else:
         st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
+
+
+
+# ============================================================
+# ARENA ANALYTICS
+# ============================================================
+
+elif page == "🏟️ Arena Analytics":
+
+    st.title("🏟️ Arena Analytics & Advanced Tools")
+
+    smiles = st.session_state.get("active_smiles", "CCO")
+    mol = get_molecule(smiles)
+
+    if mol is None:
+        st.error("❌ Invalid SMILES notation. Please load a valid molecule first.")
+    else:
+        properties = calculate_properties(mol)
+        render_extra_features(mol, properties, smiles)
+
+
+# ============================================================
+# ASSESSMENT
+# ============================================================
+
+
+# ============================================================
+# ASSESSMENT
+# ============================================================
 
 
 # ============================================================
