@@ -18,6 +18,7 @@ from rdkit.Chem import (
 import py3Dmol
 import streamlit.components.v1 as components
 from extra_features import render_extra_features
+from ai_assistant import ask_ai
 # PDF
 
 from reportlab.lib.pagesizes import A4
@@ -1207,6 +1208,8 @@ page = st.sidebar.radio(
 
         "🏟️ Arena Analytics",
 
+        "🤖 XBot Assistant",
+
         
     ]
 )
@@ -2034,15 +2037,50 @@ elif page == "🏟️ Arena Analytics":
         properties = calculate_properties(mol)
         render_extra_features(mol, properties, smiles)
 
-
-# ============================================================
-# ASSESSMENT
-# ============================================================
+else:
+        st.warning("Please enter at least one valid molecule in the format: Molecule Name, SMILES")
 
 
 # ============================================================
-# ASSESSMENT
+# XBOT AI ASSISTANT PAGE
 # ============================================================
+
+elif page == "🤖 XBot Assistant":
+
+    st.title("🤖 XBot - App & Chemistry Guide")
+    
+    st.write("""
+    Have a question about how to use this app or need help with a chemistry concept? 
+    Ask **XBot** below! It can guide you through the app features, SMILES notation, and molecular properties.
+    """)
+
+    if "xbot_messages" not in st.session_state:
+        st.session_state.xbot_messages = []
+
+    for message in st.session_state.xbot_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if user_query := st.chat_input("Ask XBot how to use the app or about a molecule..."):
+        st.session_state.xbot_messages.append({"role": "user", "content": user_query})
+        with st.chat_message("user"):
+            st.markdown(user_query)
+
+        with st.chat_message("assistant"):
+            with st.spinner("XBot is thinking..."):
+                molecule_ctx = ""
+                if "active_smiles" in st.session_state:
+                    molecule_ctx = f"Currently active SMILES in app: {st.session_state.active_smiles}"
+                
+                success, reply = ask_ai(st.session_state.xbot_messages, molecule_context=molecule_ctx)
+                
+                if success:
+                    st.markdown(reply)
+                    st.session_state.xbot_messages.append({"role": "assistant", "content": reply})
+                else:
+                    st.error(reply)
+
+
 
 
 # ============================================================
