@@ -1187,7 +1187,7 @@ def generate_final_report(student_name, registration_number, input_smiles, mol, 
 # SIDEBAR
 # ============================================================
 
-st.sidebar.title("⛏️ ChemCraft Lab")
+st.sidebar.title("🏟️ ChemSportx")
 
 page = st.sidebar.radio(
 
