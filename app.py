@@ -804,17 +804,7 @@ def save_3d_structure_png(mol):
 # ============================================================
 # PROPERTY INTERPRETATION HELPERS
 # ============================================================
-page = st.sidebar.radio(
-    "Navigation",
-    [
-        "🏠 Home",
-        "📖 Theory",
-        "🧬 Molecular Visualization",
-        "📊 Molecular Properties Report",
-        "📈 Structure–Property Analysis",
-        "🏟️ Arena Analytics",
-    ]
-)
+
 def get_property_interpretation(property_name, value, properties):
     """Return a student-friendly interpretation for each reported property."""
 
@@ -1214,6 +1204,8 @@ page = st.sidebar.radio(
         "📊 Molecular Properties Report",
 
         "📈 Structure–Property Analysis",
+
+        "🏟️ Arena Analytics",
 
         
     ]
