@@ -2107,6 +2107,6 @@ else:
 st.divider()
 
 st.caption(
-    "⛏️ ChemCraft Cheminformatics Lab | "
+    "chmsportx Cheminformatics Lab | "
     "Developed using Python, Streamlit and RDKit"
 )
