@@ -1,5 +1,5 @@
 """
-ChemBot - the AI helper inside ChemCraft Lab.
+X BOT - the AI helper inside ChemCraft Lab.
 
 The API key is NEVER written in code.  It is read from Streamlit "Secrets"
 (Streamlit Cloud -> your app -> Settings -> Secrets) or from environment
@@ -24,7 +24,7 @@ MAX_USER_CHARS = 1200         # longest question accepted
 MAX_OUTPUT_TOKENS = 700       # keeps answers short and cheap
 MAX_QUESTIONS_PER_SESSION = 30
 
-SYSTEM_PROMPT = """You are ChemBot, the friendly assistant inside ChemCraft Lab, a Minecraft-themed \
+SYSTEM_PROMPT = """You are X Bot, the friendly assistant inside Chemsportx Lab, a Minecraft-themed \
 cheminformatics learning app for undergraduate chemistry students.
 
 You help with: SMILES notation, 2D/3D molecular structures, molecular descriptors (molecular weight, \
